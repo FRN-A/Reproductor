@@ -33,7 +33,9 @@ namespace Reproductor
         WaveOutEvent output;
 
         DispatcherTimer timer;
-        
+
+        bool dragging = false;
+
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -52,6 +54,11 @@ namespace Reproductor
             if (reader != null)
             {
                 lblTiempoActual.Text = reader.CurrentTime.ToString().Substring(0, 8);
+                if (!dragging)
+                {
+                    sldReproduccion.Value = reader.CurrentTime.TotalSeconds;
+                }
+                
             }
         }
 
@@ -103,6 +110,8 @@ namespace Reproductor
 
                 lblTiempoTotal.Text = reader.TotalTime.ToString().Substring(0, 8);
                 lblTiempoActual.Text = reader.CurrentTime.ToString().Substring(0, 8);
+                sldReproduccion.Maximum = reader.TotalTime.TotalSeconds;
+                sldReproduccion.Value = reader.CurrentTime.TotalSeconds;
 
                 timer.Start();
             }
@@ -135,7 +144,21 @@ namespace Reproductor
                 output.Stop();
                 btnReproducir.IsEnabled = true;
                 btnPausa.IsEnabled = false;
-                btnReproducir.IsEnabled = false;
+                btnDetener.IsEnabled = false;
+            }
+        }
+
+        private void sldReproduccion_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e)
+        {
+            dragging = true;
+        }
+
+        private void sldReproduccion_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            dragging = false;
+            if (reader != null && output != null && (output.PlaybackState != PlaybackState.Stopped))
+            {
+                reader.CurrentTime = TimeSpan.FromSeconds(sldReproduccion.Value);
             }
         }
     }
