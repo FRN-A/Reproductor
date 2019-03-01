@@ -33,6 +33,9 @@ namespace Reproductor
         WaveOutEvent output;
 
         DispatcherTimer timer;
+        VolumeSampleProvider volume;
+        FadeInOutSampleProvider fades;
+        bool fadingOut = false;
 
         bool dragging = false;
 
@@ -47,6 +50,8 @@ namespace Reproductor
             timer = new DispatcherTimer();
             timer.Interval = TimeSpan.FromMilliseconds(500);
             timer.Tick += Timer_Tick;
+
+
 		}
 
         private void Timer_Tick(object sender, EventArgs e)
@@ -95,13 +100,21 @@ namespace Reproductor
             else
             {
                 reader = new AudioFileReader(txtRutaArchivo.Text);
+                fades = new FadeInOutSampleProvider(reader, true);
+                double milisegundosFadeIn = Double.Parse(txtDuracionFadeIn.Text) * 1000.0;
+                fades.BeginFadeIn(milisegundosFadeIn);
+                fadingOut = false;
                 output = new WaveOutEvent();
 
                 output.DeviceNumber = cbSalida.SelectedIndex;
 
                 output.PlaybackStopped += Output_PlaybackStopped;
 
-                output.Init(reader);
+                volume = new VolumeSampleProvider(fades);
+
+                volume.Volume = (float)sldVolumen.Value;
+
+                output.Init(volume);
                 output.Play();
 
                 btnDetener.IsEnabled = true;
@@ -159,6 +172,29 @@ namespace Reproductor
             if (reader != null && output != null && (output.PlaybackState != PlaybackState.Stopped))
             {
                 reader.CurrentTime = TimeSpan.FromSeconds(sldReproduccion.Value);
+            }
+        }
+
+        private void sldVolumen_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (volume != null && output != null && output.PlaybackState != PlaybackState.Stopped)
+            {
+                volume.Volume = (float)sldVolumen.Value;
+               
+            }
+            if (lblPorcentajeVolumen != null)
+            {
+                lblPorcentajeVolumen.Text = ((int)(sldVolumen.Value * 100)).ToString() + " %";
+            }
+        }
+
+        private void btnFadeOut_Click(object sender, RoutedEventArgs e)
+        {
+            if (!fadingOut && fades != null && output != null && output.PlaybackState == PlaybackState.Playing)
+            {
+                fadingOut = true;
+                double milisegundosFadeOut = Double.Parse(txtDuracionFadeOut.Text) * 1000.0;
+                fades.BeginFadeOut(milisegundosFadeOut);
             }
         }
     }
